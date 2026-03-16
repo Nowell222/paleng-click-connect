@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, ShieldCheck, Wallet, HandCoins } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -97,6 +97,27 @@ const LoginPage = () => {
               Sign In
             </Button>
           </form>
+
+          <div className="mt-6 border-t pt-5">
+            <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Quick Demo Access</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: "vendor", label: "Vendor", path: "/vendor", icon: Wallet, desc: "Maria Santos" },
+                { key: "admin", label: "Admin", path: "/admin", icon: ShieldCheck, desc: "Treasurer" },
+                { key: "cashier", label: "Cashier", path: "/cashier", icon: HandCoins, desc: "Window 1" },
+              ].map((demo) => (
+                <button
+                  key={demo.key}
+                  onClick={() => navigate(demo.path)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border bg-secondary/50 p-3 text-center transition-all duration-200 hover:bg-secondary hover:shadow-civic active:scale-[0.98]"
+                >
+                  <demo.icon className="h-5 w-5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">{demo.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{demo.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Having trouble logging in? Contact the Municipal Treasurer's Office.

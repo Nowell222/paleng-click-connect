@@ -129,6 +129,28 @@ const LandingPage = () => {
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-success" /> Secure payments</span>
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-success" /> SMS alerts</span>
             </motion.div>
+
+            {/* Demo Access */}
+            <motion.div variants={fadeUp} custom={5} className="mt-10">
+              <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Try the Demo</p>
+              <div className="inline-flex gap-2 rounded-xl border bg-card p-2 shadow-civic">
+                <Link to="/vendor">
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    🏪 Vendor
+                  </Button>
+                </Link>
+                <Link to="/admin">
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    🛡️ Admin
+                  </Button>
+                </Link>
+                <Link to="/cashier">
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    💰 Cashier
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>

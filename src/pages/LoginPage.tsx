@@ -4,25 +4,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, EyeOff, ShieldCheck, Wallet, HandCoins } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"vendor" | "admin" | "cashier">("vendor");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === "vendor") navigate("/vendor");
-    else if (role === "admin") navigate("/admin");
-    else navigate("/cashier");
+    if (!email || !password) {
+      toast.error("Please enter your email and password");
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await signIn(email, password);
+    setIsLoading(false);
+    if (error) {
+      toast.error(error);
+    } else {
+      // Role will be fetched by auth context, redirect based on role
+      // We need to wait a bit for role to be fetched
+      setTimeout(async () => {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: user.id });
+          if (roleData === "admin") navigate("/admin");
+          else if (roleData === "vendor") navigate("/vendor");
+          else if (roleData === "cashier") navigate("/cashier");
+          else navigate("/");
+        }
+      }, 200);
+    }
   };
-
-  const roles = [
-    { key: "vendor" as const, label: "Vendor" },
-    { key: "admin" as const, label: "Admin" },
-    { key: "cashier" as const, label: "Cashier" },
-  ];
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -48,29 +68,15 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Role tabs */}
-          <div className="mb-6 flex rounded-xl bg-secondary p-1">
-            {roles.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRole(r.key)}
-                className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all duration-200 ${
-                  role === r.key
-                    ? "bg-card text-foreground shadow-civic"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-foreground">Username</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
               <Input
-                id="username"
-                placeholder="Enter your username"
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-12 rounded-xl"
               />
             </div>
@@ -81,6 +87,8 @@ const LoginPage = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="h-12 rounded-xl pr-12"
                 />
                 <button
@@ -93,31 +101,10 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <Button type="submit" variant="hero" size="lg" className="w-full">
-              Sign In
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-6 border-t pt-5">
-            <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Quick Demo Access</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { key: "vendor", label: "Vendor", path: "/vendor", icon: Wallet, desc: "Maria Santos" },
-                { key: "admin", label: "Admin", path: "/admin", icon: ShieldCheck, desc: "Treasurer" },
-                { key: "cashier", label: "Cashier", path: "/cashier", icon: HandCoins, desc: "Window 1" },
-              ].map((demo) => (
-                <button
-                  key={demo.key}
-                  onClick={() => navigate(demo.path)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border bg-secondary/50 p-3 text-center transition-all duration-200 hover:bg-secondary hover:shadow-civic active:scale-[0.98]"
-                >
-                  <demo.icon className="h-5 w-5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground">{demo.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{demo.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Having trouble logging in? Contact the Municipal Treasurer's Office.

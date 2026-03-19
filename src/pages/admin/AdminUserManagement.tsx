@@ -53,7 +53,7 @@ const AdminUserManagement = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-user", {
         body: {
-          email: form.email,
+          email: form.email.trim(),
           password: form.password,
           first_name: form.first_name,
           middle_name: form.middle_name,

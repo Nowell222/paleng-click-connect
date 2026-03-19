@@ -142,19 +142,21 @@ const VendorPayOnline = () => {
     queryKey: ["vendor-pay-info", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: vendor } = await supabase
+      const { data: vendor, error: vendorError } = await supabase
         .from("vendors").select("id, stall_id, stalls(stall_number, section, monthly_rate)")
-        .eq("user_id", user!.id).single();
-      if (!vendor) return null;
+        .eq("user_id" as any, user!.id).single();
+      if (vendorError || !vendor) return null;
+      
+      const vendorData = vendor as any;
       const currentYear = new Date().getFullYear();
-      const { data: payments } = await supabase.from("payments")
+      const { data: payments, error: paymentsError } = await supabase.from("payments")
         .select("period_month, period_year, amount, payment_type, status")
-        .eq("vendor_id", vendor.id).eq("status", "completed").eq("period_year", currentYear);
+        .eq("vendor_id" as any, vendorData.id).eq("status" as any, "completed").eq("period_year" as any, currentYear);
       const monthPaidMap: Record<number, number> = {};
-      (payments || []).forEach((p) => {
+      ((payments || []) as any[]).forEach((p) => {
         if (p.period_month) monthPaidMap[p.period_month] = (monthPaidMap[p.period_month] || 0) + Number(p.amount);
       });
-      const stall = vendor.stalls as any;
+      const stall = vendorData.stalls as any;
       const monthlyRate = stall?.monthly_rate || 1450;
       let nextUnpaidMonth = 1;
       for (let m = 1; m <= 12; m++) {
@@ -163,7 +165,7 @@ const VendorPayOnline = () => {
       }
       const paidForNextMonth = monthPaidMap[nextUnpaidMonth] || 0;
       const remainingBalance = monthlyRate - paidForNextMonth;
-      return { vendor, stall, monthlyRate, nextUnpaidMonth, paidForNextMonth, remainingBalance, allPaid: nextUnpaidMonth > 12 };
+      return { vendor: vendorData, stall, monthlyRate, nextUnpaidMonth, paidForNextMonth, remainingBalance, allPaid: nextUnpaidMonth > 12 };
     },
   });
 

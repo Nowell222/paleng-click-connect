@@ -9,7 +9,7 @@ const CashierDashboardHome = () => {
     queryKey: ["cashier-dashboard"],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
-      const { data: todayPayments } = await supabase.from("payments").select("*").gte("created_at", today + "T00:00:00").eq("status", "completed");
+      const { data: todayPayments } = await supabase.from("payments").select("*").gte("created_at" as any, today + "T00:00:00").eq("status" as any, "completed");
       const totalToday = (todayPayments || []).reduce((s, p) => s + Number(p.amount), 0);
       
       const { data: recent } = await supabase.from("payments").select("*").order("created_at", { ascending: false }).limit(5);

@@ -26,7 +26,7 @@ const CashierSOA = () => {
     if (match) {
       const profile = profiles?.find(p => p.user_id === match.user_id);
       const stall = match.stalls as any;
-      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id", match.id).eq("status", "completed");
+      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id" as any, match.id).eq("status" as any, "completed");
       const currentYear = new Date().getFullYear();
       const paidMonths = new Set((payments || []).filter(p => p.period_year === currentYear).map(p => p.period_month));
       setData({ profile, stall, paidMonths, monthlyRate: stall?.monthly_rate || 1450 });

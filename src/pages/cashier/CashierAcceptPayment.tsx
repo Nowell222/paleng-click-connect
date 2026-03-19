@@ -31,7 +31,7 @@ const CashierAcceptPayment = () => {
 
   const loadVendorById = async (vendorId: string) => {
     setSearching(true);
-    const { data: v } = await supabase.from("vendors").select("id, user_id, stall_id, stalls(*)").eq("id", vendorId).single();
+    const { data: v } = await supabase.from("vendors").select("id, user_id, stall_id, stalls(*)").eq("id" as any, vendorId).single();
     if (v) {
       const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", v.user_id).single();
       setVendor({ ...v, stall: v.stalls, profile });

@@ -16,18 +16,23 @@ const VendorDashboardHome = () => {
     queryKey: ["vendor-dashboard", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: vendor } = await supabase.from("vendors").select("*, stalls(*)").eq("user_id", user!.id).single();
-      const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user!.id).single();
-      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id", vendor?.id || "").order("created_at", { ascending: false });
+      const { data: vendor, error: vendorError } = await supabase.from("vendors").select("*, stalls(*)").eq("user_id" as any, user!.id).single();
+      const { data: profile, error: profileError } = await supabase.from("profiles").select("*").eq("user_id" as any, user!.id).single();
+      
+      if (vendorError || profileError || !vendor) return null;
+      
+      const vendorData = vendor as any;
+      const profileData = profile as any;
+      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id" as any, vendorData.id || "").order("created_at", { ascending: false });
 
-      const stall = vendor?.stalls as any;
+      const stall = vendorData?.stalls as any;
       const monthlyRate = stall?.monthly_rate || 1450;
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
 
       // Calculate paid amounts per month
       const monthPaidMap: Record<number, number> = {};
-      (payments || []).filter(p => p.status === "completed" && p.period_year === currentYear).forEach(p => {
+      ((payments || []) as any[]).filter(p => p.status === "completed" && p.period_year === currentYear).forEach(p => {
         if (p.period_month) {
           monthPaidMap[p.period_month] = (monthPaidMap[p.period_month] || 0) + Number(p.amount);
         }
@@ -49,7 +54,7 @@ const VendorDashboardHome = () => {
       }
 
       return {
-        vendor, profile, stall, monthlyRate,
+        vendor: vendorData, profile: profileData, stall, monthlyRate,
         payments: (payments || []).slice(0, 5),
         isCurrentMonthPaid, paidThisMonth, remainingThisMonth,
         nextUnpaidMonth, allPaid: nextUnpaidMonth > 12,
@@ -59,9 +64,9 @@ const VendorDashboardHome = () => {
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  const stall = data?.stall;
-  const vendor = data?.vendor;
-  const profile = data?.profile;
+  const stall = data?.stall as any;
+  const vendor = data?.vendor as any;
+  const profile = data?.profile as any;
   const monthlyRate = data?.monthlyRate || 1450;
   const currentMonth = new Date().getMonth() + 1;
 
@@ -135,10 +140,10 @@ const VendorDashboardHome = () => {
 
         <div>
           <div className="mb-4">
-            {vendor?.qr_code ? <QRCodeSVG value={vendor.qr_code} size={128} /> : <QrCode className="h-16 w-16 text-muted-foreground/50" />}
+            {(vendor as any)?.qr_code ? <QRCodeSVG value={(vendor as any).qr_code} size={128} /> : <QrCode className="h-16 w-16 text-muted-foreground/50" />}
           </div>
           <h3 className="font-semibold text-foreground">Your Stall QR Code</h3>
-          <p className="mt-1 text-xs font-mono text-muted-foreground">{vendor?.qr_code}</p>
+          <p className="mt-1 text-xs font-mono text-muted-foreground">{(vendor as any)?.qr_code}</p>
         </div>
       </div>
 

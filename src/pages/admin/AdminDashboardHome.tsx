@@ -10,7 +10,7 @@ const AdminDashboardHome = () => {
     queryFn: async () => {
       const [vendorsRes, paymentsRes, stallsRes] = await Promise.all([
         supabase.from("vendors").select("id, user_id").then(r => r.data || []),
-        supabase.from("payments").select("*").eq("status", "completed").then(r => r.data || []),
+        supabase.from("payments").select("*").eq("status" as any, "completed").then(r => r.data || []),
         supabase.from("stalls").select("id, status").then(r => r.data || []),
       ]);
 
@@ -19,7 +19,7 @@ const AdminDashboardHome = () => {
       const occupiedStalls = stallsRes.filter(s => s.status === "occupied").length;
 
       // Recent payments
-      const { data: recentPayments } = await supabase
+      const { data: recentPayments, error: recentError } = await supabase
         .from("payments")
         .select("*")
         .order("created_at", { ascending: false })
@@ -27,15 +27,17 @@ const AdminDashboardHome = () => {
 
       // Get vendor details for recent payments
       let recentTx: any[] = [];
-      if (recentPayments?.length) {
-        const vendorIds = [...new Set(recentPayments.map(p => p.vendor_id))];
+      if (recentError || !recentPayments?.length) {
+        // Skip if error or no data
+      } else {
+        const vendorIds = [...new Set((recentPayments as any[]).map(p => p.vendor_id))];
         const { data: vendors } = await supabase.from("vendors").select("id, user_id, stalls(stall_number)").in("id", vendorIds);
-        const userIds = vendors?.map(v => v.user_id) || [];
+        const userIds = (vendors as any[])?.map(v => v.user_id) || [];
         const { data: profiles } = await supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", userIds);
 
-        recentTx = recentPayments.map(p => {
-          const vendor = vendors?.find(v => v.id === p.vendor_id);
-          const profile = profiles?.find(pr => pr.user_id === vendor?.user_id);
+        recentTx = (recentPayments as any[]).map(p => {
+          const vendor = (vendors as any[])?.find(v => v.id === p.vendor_id);
+          const profile = (profiles as any[])?.find(pr => pr.user_id === vendor?.user_id);
           return {
             vendor: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown",
             stall: (vendor?.stalls as any)?.stall_number || "—",
@@ -47,18 +49,20 @@ const AdminDashboardHome = () => {
       }
 
       // Overdue payments
-      const { data: overdueSchedules } = await supabase
+      const { data: overdueSchedules, error: overdueError } = await supabase
         .from("payment_schedules")
         .select("*, vendors(user_id, stalls(stall_number))")
-        .eq("status", "overdue")
+        .eq("status" as any, "overdue")
         .limit(5);
 
       let delinquent: any[] = [];
-      if (overdueSchedules?.length) {
-        const userIds = overdueSchedules.map((s: any) => s.vendors?.user_id).filter(Boolean);
+      if (overdueError || !overdueSchedules?.length) {
+        // Skip if error or no data
+      } else {
+        const userIds = (overdueSchedules as any[]).map((s: any) => s.vendors?.user_id).filter(Boolean);
         const { data: profiles } = await supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", userIds);
-        delinquent = overdueSchedules.map((s: any) => {
-          const profile = profiles?.find(p => p.user_id === s.vendors?.user_id);
+        delinquent = (overdueSchedules as any[]).map((s: any) => {
+          const profile = (profiles as any[])?.find(p => p.user_id === s.vendors?.user_id);
           return {
             name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown",
             stall: s.vendors?.stalls?.stall_number || "—",

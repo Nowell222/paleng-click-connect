@@ -18,7 +18,7 @@ const CashierReports = () => {
         .from("payments")
         .select("amount, created_at, status")
         .gte("created_at", startDate + "T00:00:00")
-        .eq("status", "completed");
+        .eq("status" as any, "completed");
 
       const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const dailyMap: Record<string, number> = {};

@@ -43,7 +43,7 @@ const AdminNews = () => {
 
   const deleteNews = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      const { error } = await supabase.from("announcements").delete().eq("id" as any, id);
       if (error) throw error;
     },
     onSuccess: () => {

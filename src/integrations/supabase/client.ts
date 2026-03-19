@@ -13,5 +13,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+    lockRecoveryMs: 30000, // Increase lock timeout to 30 seconds to prevent lock conflicts
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  },
 });

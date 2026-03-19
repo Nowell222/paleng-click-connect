@@ -14,7 +14,7 @@ const VendorStatement = () => {
     queryFn: async () => {
       const { data: vendor } = await supabase.from("vendors").select("id, stalls(stall_number, section, monthly_rate)").eq("user_id", user!.id).single();
       const { data: profile } = await supabase.from("profiles").select("first_name, last_name").eq("user_id", user!.id).single();
-      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id", vendor?.id || "").eq("status", "completed").order("created_at", { ascending: true });
+      const { data: payments } = await supabase.from("payments").select("*").eq("vendor_id" as any, vendor?.id || "").eq("status" as any, "completed").order("created_at", { ascending: true });
       return { vendor, profile, payments: payments || [], stall: vendor?.stalls as any };
     },
   });

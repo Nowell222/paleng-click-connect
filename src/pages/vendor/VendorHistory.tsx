@@ -13,7 +13,7 @@ const VendorHistory = () => {
     queryFn: async () => {
       const { data: vendor } = await supabase.from("vendors").select("id").eq("user_id", user!.id).single();
       if (!vendor) return [];
-      const { data } = await supabase.from("payments").select("*").eq("vendor_id", vendor.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("payments").select("*").eq("vendor_id" as any, vendor.id).order("created_at", { ascending: false });
       return data || [];
     },
   });

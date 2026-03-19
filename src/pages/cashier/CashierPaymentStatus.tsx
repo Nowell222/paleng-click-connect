@@ -11,15 +11,18 @@ const CashierPaymentStatus = () => {
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["cashier-payment-status"],
     queryFn: async () => {
-      const { data: paymentsList } = await supabase.from("payments").select("*").order("created_at", { ascending: false }).limit(50);
-      if (!paymentsList?.length) return [];
-      const vendorIds = [...new Set(paymentsList.map(p => p.vendor_id))];
+      const { data: paymentsList, error: paymentsError } = await supabase.from("payments").select("*").order("created_at", { ascending: false }).limit(50);
+      if (paymentsError || !paymentsList?.length) return [];
+      
+      const vendorIds = [...new Set((paymentsList as any[]).map(p => p.vendor_id))];
       const { data: vendors } = await supabase.from("vendors").select("id, user_id, stalls(stall_number)").in("id", vendorIds);
-      const userIds = vendors?.map(v => v.user_id) || [];
+      
+      const userIds = (vendors as any[])?.map(v => v.user_id) || [];
       const { data: profiles } = await supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", userIds);
-      return paymentsList.map(p => {
-        const vendor = vendors?.find(v => v.id === p.vendor_id);
-        const profile = profiles?.find(pr => pr.user_id === vendor?.user_id);
+      
+      return (paymentsList as any[]).map(p => {
+        const vendor = (vendors as any[])?.find(v => v.id === p.vendor_id);
+        const profile = (profiles as any[])?.find(pr => pr.user_id === vendor?.user_id);
         return { ...p, vendor_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown", stall: (vendor?.stalls as any)?.stall_number || "—" };
       });
     },

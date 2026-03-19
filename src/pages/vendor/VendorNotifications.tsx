@@ -21,7 +21,7 @@ const VendorNotifications = () => {
 
   const markRead = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").update({ read_status: true }).eq("id", id);
+      await supabase.from("notifications").update({ read_status: true } as any).eq("id" as any, id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vendor-notifications"] }),
   });

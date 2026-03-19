@@ -1,132 +1,76 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, user, role, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!email || !password) { 
-    toast.error("Please enter your email and password"); 
-    return; 
-  }
-  
-  setIsLoading(true);
-  
-  try {
-    const { error } = await signIn(email, password);
+
+  // Watch for role change after successful login
+  useEffect(() => {
+    if (user && role && !isLoading) {
+      console.log("[Login] ✅ Auth context updated with role:", role);
+      
+      if (role === "admin") {
+        console.log("[Login] ✅ Navigating to /admin");
+        navigate("/admin");
+      } else if (role === "vendor") {
+        console.log("[Login] ✅ Navigating to /vendor");
+        navigate("/vendor");
+      } else if (role === "cashier") {
+        console.log("[Login] ✅ Navigating to /cashier");
+        navigate("/cashier");
+      }
+    }
+  }, [user, role, isLoading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (error) {
-      toast.error(error);
-      setIsLoading(false);
-      return;
+    if (!email || !password) { 
+      toast.error("Please enter your email and password"); 
+      return; 
     }
     
-    // Wait for session to be established
-    await new Promise(resolve => setTimeout(resolve, 500));
+    setIsLoading(true);
+    console.log("[Login] Starting login process for:", email);
     
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    const tryNavigate = async () => {
-      attempts++;
-      console.log(`[Login] Fetching user role... (attempt ${attempts}/${maxAttempts})`);
+    try {
+      // Test Supabase connectivity first
+      console.log("[Login] 🔌 Testing Supabase connection...");
+      const { data: { session: testSession }, error: testError } = await supabase.auth.getSession();
+      console.log("[Login] ✅ Supabase responded, test session:", testSession?.user?.email || "no session");
+      if (testError) console.warn("[Login] ⚠️ getSession error (non-blocking):", testError);
       
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error("[Login] Error getting user:", userError);
-          if (attempts < maxAttempts) {
-            setTimeout(tryNavigate, 300);
-          } else {
-            toast.error("Session error. Please try again.");
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        if (!user) {
-          console.error("[Login] No user found after login");
-          if (attempts < maxAttempts) {
-            setTimeout(tryNavigate, 300);
-          } else {
-            toast.error("User session not found. Please try again.");
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        console.log("[Login] User found:", user.email);
-        
-        const { data: roleData, error: roleError } = await supabase.rpc("get_user_role", { _user_id: user.id });
-        
-        if (roleError) {
-          console.error("[Login] Error fetching role:", roleError);
-          if (attempts < maxAttempts) {
-            setTimeout(tryNavigate, 300);
-          } else {
-            toast.error("Could not fetch user role. Contact support.");
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        console.log("[Login] Role fetched:", roleData);
-        
-        if (roleData === "admin") { 
-          console.log("[Login] Navigating to admin");
-          navigate("/admin"); 
-          return; 
-        }
-        else if (roleData === "vendor") { 
-          console.log("[Login] Navigating to vendor");
-          navigate("/vendor"); 
-          return; 
-        }
-        else if (roleData === "cashier") { 
-          console.log("[Login] Navigating to cashier");
-          navigate("/cashier"); 
-          return; 
-        }
-        
-        // If we get here, role was not found
-        console.warn("[Login] Unknown role:", roleData);
-        if (attempts < maxAttempts) {
-          setTimeout(tryNavigate, 300);
-        } else {
-          toast.error("Your account does not have a valid role assigned. Contact support.");
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.error("[Login] Unexpected error:", err);
-        if (attempts < maxAttempts) {
-          setTimeout(tryNavigate, 300);
-        } else {
-          toast.error("Unexpected error during login. Please try again.");
-          setIsLoading(false);
-        }
+      console.log("[Login] Calling signIn...");
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error("[Login] Sign in error:", error);
+        toast.error(error || "Login failed");
+        setIsLoading(false);
+        return;
       }
-    };
-    
-    tryNavigate();
-  } catch (err) {
-    console.error("[Login] Failed to sign in:", err);
-    toast.error("Login failed. Please try again.");
-    setIsLoading(false);
-  }
-};
+      
+      console.log("[Login] Sign in successful, waiting for auth context to update...");
+      // Auth context will now fetch the role and trigger the useEffect above
+      // Keep isLoading true, it will be set to false after navigation
+    } catch (err) {
+      console.error("[Login] Unexpected error during login:", err);
+      toast.error("Login failed. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

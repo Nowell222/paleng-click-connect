@@ -14,10 +14,10 @@ const AdminReports = () => {
       const { data: payments } = await supabase
         .from("payments")
         .select("amount, status, created_at, payment_method")
-        .eq("status", "completed");
+        .eq("status" as any, "completed");
 
       const totalCollected = (payments || []).reduce((s, p) => s + Number(p.amount), 0);
-      const { data: overdueSchedules } = await supabase.from("payment_schedules").select("amount").eq("status", "overdue");
+      const { data: overdueSchedules } = await supabase.from("payment_schedules").select("amount").eq("status" as any, "overdue");
       const totalOverdue = (overdueSchedules || []).reduce((s, p) => s + Number(p.amount), 0);
 
       return { totalCollected, totalOverdue, paymentCount: payments?.length || 0 };

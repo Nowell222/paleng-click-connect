@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Users, TrendingDown, TrendingUp, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
@@ -92,13 +91,13 @@ const AdminDashboardHome = () => {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="rounded-2xl border bg-card p-5 shadow-civic">
+          <div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{s.label}</span>
               <s.icon className="h-4 w-4 text-muted-foreground" />
             </div>
             <p className="mt-2 font-mono text-2xl font-bold text-foreground">{s.value}</p>
-          </motion.div>
+          </div>
         ))}
       </div>
 

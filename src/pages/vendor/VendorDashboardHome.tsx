@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { CreditCard, QrCode, Clock, CheckCircle2, AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -113,7 +112,7 @@ const VendorDashboardHome = () => {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <motion.div whileHover={{ y: -2 }} className="rounded-2xl border bg-card p-6 shadow-civic">
+        <div>
           <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             {data?.isCurrentMonthPaid ? "Next Bill" : "Amount Due"}
           </span>
@@ -131,15 +130,15 @@ const VendorDashboardHome = () => {
               {data?.isCurrentMonthPaid ? "Pay in Advance" : "Pay Now"}
             </Button>
           </Link>
-        </motion.div>
+        </div>
 
-        <motion.div whileHover={{ y: -2 }} className="rounded-2xl border bg-card p-6 shadow-civic flex flex-col items-center justify-center text-center">
+        <div>
           <div className="mb-4">
             {vendor?.qr_code ? <QRCodeSVG value={vendor.qr_code} size={128} /> : <QrCode className="h-16 w-16 text-muted-foreground/50" />}
           </div>
           <h3 className="font-semibold text-foreground">Your Stall QR Code</h3>
           <p className="mt-1 text-xs font-mono text-muted-foreground">{vendor?.qr_code}</p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Recent Payments */}

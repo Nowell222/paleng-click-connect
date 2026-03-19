@@ -25,12 +25,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRoleAndProfile = async (userId: string) => {
-    const [roleRes, profileRes] = await Promise.all([
-      supabase.rpc("get_user_role", { _user_id: userId }),
-      supabase.from("profiles").select("first_name, last_name, middle_name, contact_number").eq("user_id", userId).single(),
-    ]);
-    if (roleRes.data) setRole(roleRes.data as AppRole);
-    if (profileRes.data) setProfile(profileRes.data);
+    try {
+      const [roleRes, profileRes] = await Promise.all([
+        supabase.rpc("get_user_role", { _user_id: userId }),
+        supabase.from("profiles").select("first_name, last_name, middle_name, contact_number").eq("user_id", userId).single(),
+      ]);
+      if (roleRes.data) setRole(roleRes.data as AppRole);
+      if (profileRes.data) setProfile(profileRes.data);
+    } catch (error) {
+      console.error("Error fetching role and profile:", error);
+    }
   };
 
   useEffect(() => {
@@ -38,7 +42,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
-        setTimeout(() => fetchRoleAndProfile(sess.user.id), 0);
+        try {
+          await fetchRoleAndProfile(sess.user.id);
+        } catch (error) {
+          console.error("Error fetching role and profile:", error);
+        }
       } else {
         setRole(null);
         setProfile(null);
@@ -50,8 +58,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
-        fetchRoleAndProfile(sess.user.id);
+        fetchRoleAndProfile(sess.user.id).catch((error) => {
+          console.error("Error fetching role and profile:", error);
+        });
       }
+      setLoading(false);
+    }).catch((error) => {
+      console.error("Error getting session:", error);
       setLoading(false);
     });
 

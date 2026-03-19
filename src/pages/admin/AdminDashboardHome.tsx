@@ -1,3 +1,4 @@
+
 import { Users, TrendingDown, TrendingUp, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";

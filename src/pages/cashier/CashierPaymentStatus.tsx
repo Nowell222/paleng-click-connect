@@ -5,9 +5,9 @@ import { useEffect } from "react";
 
 const statusIcon: Record<string, any> = { completed: CheckCircle2, pending: Clock, failed: AlertCircle };
 const statusColor: Record<string, string> = { completed: "text-success", pending: "text-primary", failed: "text-accent" };
-const queryClient = useQueryClient();
 
 const CashierPaymentStatus = () => {
+  const queryClient = useQueryClient();
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["cashier-payment-status"],
     queryFn: async () => {
@@ -33,7 +33,7 @@ const CashierPaymentStatus = () => {
     })
     .subscribe();
   return () => { supabase.removeChannel(channel); };
-}, []);
+}, [queryClient]);
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 

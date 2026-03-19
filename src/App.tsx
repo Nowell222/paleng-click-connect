@@ -38,68 +38,88 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
+const AppContent = () => (
+  <Routes>
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/login" element={<LoginPage />} />
 
-            {/* Admin routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <DashboardLayout role="admin" />
-              </ProtectedRoute>
-            }>
-              <Route index element={<AdminDashboardHome />} />
-              <Route path="users" element={<AdminUserManagement />} />
-              <Route path="payments" element={<AdminPayments />} />
-              <Route path="qr-codes" element={<AdminQRCodes />} />
-              <Route path="sms" element={<AdminSMS />} />
-              <Route path="news" element={<AdminNews />} />
-              <Route path="reports" element={<AdminReports />} />
-            </Route>
+    {/* Admin routes */}
+    <Route path="/admin" element={
+      <ProtectedRoute allowedRoles={["admin"]}>
+        <DashboardLayout role="admin" />
+      </ProtectedRoute>
+    }>
+      <Route index element={<AdminDashboardHome />} />
+      <Route path="users" element={<AdminUserManagement />} />
+      <Route path="payments" element={<AdminPayments />} />
+      <Route path="qr-codes" element={<AdminQRCodes />} />
+      <Route path="sms" element={<AdminSMS />} />
+      <Route path="news" element={<AdminNews />} />
+      <Route path="reports" element={<AdminReports />} />
+    </Route>
 
-            {/* Vendor routes */}
-            <Route path="/vendor" element={
-              <ProtectedRoute allowedRoles={["vendor"]}>
-                <DashboardLayout role="vendor" />
-              </ProtectedRoute>
-            }>
-              <Route index element={<VendorDashboardHome />} />
-              <Route path="pay" element={<VendorPayOnline />} />
-              <Route path="history" element={<VendorHistory />} />
-              <Route path="statement" element={<VendorStatement />} />
-              <Route path="stall" element={<VendorStallInfo />} />
-              <Route path="notifications" element={<VendorNotifications />} />
-              <Route path="news" element={<VendorNews />} />
-            </Route>
+    {/* Vendor routes */}
+    <Route path="/vendor" element={
+      <ProtectedRoute allowedRoles={["vendor"]}>
+        <DashboardLayout role="vendor" />
+      </ProtectedRoute>
+    }>
+      <Route index element={<VendorDashboardHome />} />
+      <Route path="pay" element={<VendorPayOnline />} />
+      <Route path="history" element={<VendorHistory />} />
+      <Route path="statement" element={<VendorStatement />} />
+      <Route path="stall" element={<VendorStallInfo />} />
+      <Route path="notifications" element={<VendorNotifications />} />
+      <Route path="news" element={<VendorNews />} />
+    </Route>
 
-            {/* Cashier routes */}
-            <Route path="/cashier" element={
-              <ProtectedRoute allowedRoles={["cashier"]}>
-                <DashboardLayout role="cashier" />
-              </ProtectedRoute>
-            }>
-              <Route index element={<CashierDashboardHome />} />
-              <Route path="accept" element={<CashierAcceptPayment />} />
-              <Route path="search" element={<CashierSearchVendor />} />
-              <Route path="status" element={<CashierPaymentStatus />} />
-              <Route path="soa" element={<CashierSOA />} />
-              <Route path="sms" element={<CashierSMS />} />
-              <Route path="reports" element={<CashierReports />} />
-            </Route>
+    {/* Cashier routes */}
+    <Route path="/cashier" element={
+      <ProtectedRoute allowedRoles={["cashier"]}>
+        <DashboardLayout role="cashier" />
+      </ProtectedRoute>
+    }>
+      <Route index element={<CashierDashboardHome />} />
+      <Route path="accept" element={<CashierAcceptPayment />} />
+      <Route path="search" element={<CashierSearchVendor />} />
+      <Route path="status" element={<CashierPaymentStatus />} />
+      <Route path="soa" element={<CashierSOA />} />
+      <Route path="sms" element={<CashierSMS />} />
+      <Route path="reports" element={<CashierReports />} />
+    </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    <Route path="*" element={<NotFound />} />
+  </Routes>
 );
+
+const App = () => {
+  try {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  } catch (error) {
+    console.error("Error rendering App:", error);
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="max-w-md rounded-lg border border-destructive bg-card p-8">
+          <h2 className="mb-4 text-lg font-bold text-destructive">Error</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "An unexpected error occurred"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+};
 
 export default App;

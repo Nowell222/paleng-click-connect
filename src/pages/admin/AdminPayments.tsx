@@ -10,6 +10,7 @@ import { useEffect } from "react";
 const AdminPayments = () => {
   const [paymentType, setPaymentType] = useState("All");
   const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["admin-payments"],
@@ -51,7 +52,6 @@ const AdminPayments = () => {
       });
     },
   });
-const queryClient = useQueryClient();
 
 useEffect(() => {
   const channel = supabase
@@ -61,7 +61,7 @@ useEffect(() => {
     })
     .subscribe();
   return () => { supabase.removeChannel(channel); };
-}, []);
+}, [queryClient]);
   const types = ["All", "due", "manual", "staggered"];
   const filtered = payments.filter(
     (p: any) =>

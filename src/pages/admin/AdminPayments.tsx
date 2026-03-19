@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+
 
 const AdminPayments = () => {
   const [paymentType, setPaymentType] = useState("All");
@@ -49,7 +51,17 @@ const AdminPayments = () => {
       });
     },
   });
+const queryClient = useQueryClient();
 
+useEffect(() => {
+  const channel = supabase
+    .channel("admin-payments-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-payments"] });
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}, []);
   const types = ["All", "due", "manual", "staggered"];
   const filtered = payments.filter(
     (p: any) =>

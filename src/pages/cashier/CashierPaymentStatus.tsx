@@ -1,9 +1,11 @@
 import { CheckCircle2, AlertCircle, Clock, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 const statusIcon: Record<string, any> = { completed: CheckCircle2, pending: Clock, failed: AlertCircle };
 const statusColor: Record<string, string> = { completed: "text-success", pending: "text-primary", failed: "text-accent" };
+const queryClient = useQueryClient();
 
 const CashierPaymentStatus = () => {
   const { data: payments = [], isLoading } = useQuery({
@@ -22,6 +24,16 @@ const CashierPaymentStatus = () => {
       });
     },
   });
+
+  useEffect(() => {
+  const channel = supabase
+    .channel("cashier-payments-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
+      queryClient.invalidateQueries({ queryKey: ["cashier-payment-status"] });
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}, []);
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 

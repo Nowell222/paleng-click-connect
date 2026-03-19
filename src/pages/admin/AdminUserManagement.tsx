@@ -47,6 +47,9 @@ const AdminUserManagement = () => {
 
   const createUser = useMutation({
     mutationFn: async () => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) throw new Error("Please enter a valid email address");
+      if (form.password.length < 6) throw new Error("Password must be at least 6 characters");
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-user", {
         body: {

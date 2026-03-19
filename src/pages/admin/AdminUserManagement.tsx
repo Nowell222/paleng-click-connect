@@ -69,8 +69,10 @@ const AdminUserManagement = () => {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Account created successfully!");
+      // Small delay to let the DB trigger complete profile/role creation
+      await new Promise(r => setTimeout(r, 500));
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setShowCreate(false);
       setForm({ first_name: "", middle_name: "", last_name: "", address: "", contact_number: "", stall_number: "", section: "General", role: "vendor", email: "", password: "" });

@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,10 +29,7 @@ const LoginPage = () => {
     if (error) {
       toast.error(error);
     } else {
-      // Role will be fetched by auth context, redirect based on role
-      // We need to wait a bit for role to be fetched
       setTimeout(async () => {
-        const { supabase } = await import("@/integrations/supabase/client");
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: user.id });

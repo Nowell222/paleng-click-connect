@@ -15,28 +15,37 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) { toast.error("Please enter your email and password"); return; }
-    setIsLoading(true);
-    const { error } = await signIn(email, password);
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!email || !password) { toast.error("Please enter your email and password"); return; }
+  setIsLoading(true);
+  const { error } = await signIn(email, password);
+  if (error) {
+    toast.error(error);
     setIsLoading(false);
-    if (error) {
-      toast.error(error);
+    return;
+  }
+  // Wait longer for role to be fetched on production
+  let attempts = 0;
+  const tryNavigate = async () => {
+    attempts++;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: user.id });
+      if (roleData === "admin") { navigate("/admin"); return; }
+      else if (roleData === "vendor") { navigate("/vendor"); return; }
+      else if (roleData === "cashier") { navigate("/cashier"); return; }
+    }
+    // Retry up to 5 times with 500ms delay
+    if (attempts < 5) {
+      setTimeout(tryNavigate, 500);
     } else {
-      setTimeout(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: user.id });
-          if (roleData === "admin") navigate("/admin");
-          else if (roleData === "vendor") navigate("/vendor");
-          else if (roleData === "cashier") navigate("/cashier");
-          else navigate("/");
-        }
-      }, 200);
+      toast.error("Could not determine user role. Please try again.");
+      setIsLoading(false);
     }
   };
+  setTimeout(tryNavigate, 300);
+};
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

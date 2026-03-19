@@ -1,8 +1,9 @@
-import { Button } from "@/components/ui/button";
-import { Download, Printer, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const VendorStatement = () => {
   const { user } = useAuth();
@@ -24,19 +25,32 @@ const VendorStatement = () => {
   const profile = data?.profile;
   const payments = data?.payments || [];
   const monthlyRate = stall?.monthly_rate || 1450;
-
-  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentYear = new Date().getFullYear();
-  const paidMonths = new Set(payments.filter(p => p.period_year === currentYear).map(p => p.period_month));
-  const totalOutstanding = months.filter((_, i) => !paidMonths.has(i + 1) && i + 1 <= new Date().getMonth() + 1).length * monthlyRate;
+  const currentMonth = new Date().getMonth() + 1;
+
+  // Calculate paid amounts per month (supports staggered)
+  const monthPaidMap: Record<number, number> = {};
+  payments.filter(p => p.period_year === currentYear).forEach(p => {
+    if (p.period_month) {
+      monthPaidMap[p.period_month] = (monthPaidMap[p.period_month] || 0) + Number(p.amount);
+    }
+  });
+
+  // Calculate outstanding (only for months up to current)
+  const totalOutstanding = MONTHS.reduce((sum, _, i) => {
+    const month = i + 1;
+    if (month > currentMonth) return sum;
+    const paid = monthPaidMap[month] || 0;
+    return sum + Math.max(0, monthlyRate - paid);
+  }, 0);
+
+  const totalPaid = Object.values(monthPaidMap).reduce((s, v) => s + v, 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Statement of Account</h1>
-          <p className="text-sm text-muted-foreground">Official summary of your stall rental payments</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Statement of Account</h1>
+        <p className="text-sm text-muted-foreground">Official summary of your stall rental payments</p>
       </div>
       <div className="rounded-2xl border bg-card p-6 shadow-civic max-w-2xl">
         <div className="mb-6 border-b pb-4">
@@ -51,22 +65,51 @@ const VendorStatement = () => {
           <div><p className="text-muted-foreground">Year</p><p className="font-medium text-foreground">{currentYear}</p></div>
         </div>
         <table className="w-full text-sm mb-6">
-          <thead><tr className="border-b"><th className="pb-2 text-left font-medium text-muted-foreground">Period</th><th className="pb-2 text-right font-medium text-muted-foreground">Amount</th><th className="pb-2 text-right font-medium text-muted-foreground">Status</th></tr></thead>
+          <thead><tr className="border-b">
+            <th className="pb-2 text-left font-medium text-muted-foreground">Period</th>
+            <th className="pb-2 text-right font-medium text-muted-foreground">Amount Due</th>
+            <th className="pb-2 text-right font-medium text-muted-foreground">Paid</th>
+            <th className="pb-2 text-right font-medium text-muted-foreground">Balance</th>
+            <th className="pb-2 text-right font-medium text-muted-foreground">Status</th>
+          </tr></thead>
           <tbody className="divide-y">
-            {months.map((m, i) => (
-              <tr key={m}>
-                <td className="py-2 text-foreground">{m} {currentYear}</td>
-                <td className="py-2 text-right font-mono text-foreground">₱{Number(monthlyRate).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-                <td className={`py-2 text-right font-semibold ${paidMonths.has(i + 1) ? "text-success" : "text-muted-foreground"}`}>
-                  {paidMonths.has(i + 1) ? "Paid" : "Pending"}
-                </td>
-              </tr>
-            ))}
+            {MONTHS.map((m, i) => {
+              const month = i + 1;
+              const paid = monthPaidMap[month] || 0;
+              const balance = Math.max(0, monthlyRate - paid);
+              const isFully = paid >= monthlyRate;
+              const isPartial = paid > 0 && paid < monthlyRate;
+              const isFuture = month > currentMonth && paid === 0;
+
+              return (
+                <tr key={m} className={isFuture ? "opacity-50" : ""}>
+                  <td className="py-2 text-foreground">{m} {currentYear}</td>
+                  <td className="py-2 text-right font-mono text-foreground">₱{monthlyRate.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                  <td className="py-2 text-right font-mono text-foreground">
+                    {paid > 0 ? `₱${paid.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "—"}
+                  </td>
+                  <td className={`py-2 text-right font-mono font-medium ${balance > 0 && !isFuture ? "text-accent" : "text-foreground"}`}>
+                    {isFully ? "—" : `₱${balance.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`}
+                  </td>
+                  <td className={`py-2 text-right text-xs font-semibold ${
+                    isFully ? "text-success" : isPartial ? "text-primary" : isFuture ? "text-muted-foreground" : "text-accent"
+                  }`}>
+                    {isFully ? "✓ Paid" : isPartial ? "Partial" : isFuture ? "Upcoming" : "Pending"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        <div className="flex justify-between border-t pt-4 text-sm">
-          <span className="font-medium text-foreground">Total Outstanding</span>
-          <span className="font-mono text-xl font-bold text-accent">₱{totalOutstanding.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Paid ({currentYear})</span>
+            <span className="font-mono font-semibold text-success">₱{totalPaid.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="font-medium text-foreground">Total Outstanding</span>
+            <span className="font-mono text-xl font-bold text-accent">₱{totalOutstanding.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+          </div>
         </div>
       </div>
     </div>

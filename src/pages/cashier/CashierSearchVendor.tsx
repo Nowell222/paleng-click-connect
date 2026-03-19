@@ -17,19 +17,16 @@ const CashierSearchVendor = () => {
       if (!vendorList) return [];
       const userIds = vendorList.map(v => v.user_id);
       const { data: profiles } = await supabase.from("profiles").select("user_id, first_name, last_name, contact_number, status").in("user_id", userIds);
-      
-      // Get payment info
-      const vendorIds = vendorList.map(v => v.id);
-      const { data: payments } = await supabase.from("payments").select("vendor_id, amount, status").in("vendor_id", vendorIds).eq("status", "completed");
-      
+
       return vendorList.map(v => {
         const profile = profiles?.find(p => p.user_id === v.user_id);
         const stall = v.stalls as any;
-        const paidTotal = (payments || []).filter(p => p.vendor_id === v.id).reduce((s, p) => s + Number(p.amount), 0);
         return {
-          id: v.id, name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
+          id: v.id, userId: v.user_id,
+          name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
           stall: stall?.stall_number || "—", section: stall?.section || "General",
           contact: profile?.contact_number || "—", status: profile?.status || "active",
+          monthlyRate: stall?.monthly_rate || 1450,
         };
       });
     },
@@ -51,7 +48,7 @@ const CashierSearchVendor = () => {
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${v.status === "active" ? "bg-success/10 text-success" : "bg-accent/10 text-accent"}`}>{v.status}</span>
-                <Button size="sm" onClick={() => navigate("/cashier/accept")}>Accept Payment</Button>
+                <Button size="sm" onClick={() => navigate(`/cashier/accept?vendorId=${v.id}`)}>Accept Payment</Button>
               </div>
             </div>
           ))}

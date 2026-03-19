@@ -17,34 +17,115 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
-  if (!email || !password) { toast.error("Please enter your email and password"); return; }
-  setIsLoading(true);
-  const { error } = await signIn(email, password);
-  if (error) {
-    toast.error(error);
-    setIsLoading(false);
-    return;
+  if (!email || !password) { 
+    toast.error("Please enter your email and password"); 
+    return; 
   }
-  // Wait longer for role to be fetched on production
-  let attempts = 0;
-  const tryNavigate = async () => {
-    attempts++;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: user.id });
-      if (roleData === "admin") { navigate("/admin"); return; }
-      else if (roleData === "vendor") { navigate("/vendor"); return; }
-      else if (roleData === "cashier") { navigate("/cashier"); return; }
-    }
-    // Retry up to 5 times with 500ms delay
-    if (attempts < 5) {
-      setTimeout(tryNavigate, 500);
-    } else {
-      toast.error("Could not determine user role. Please try again.");
+  
+  setIsLoading(true);
+  
+  try {
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast.error(error);
       setIsLoading(false);
+      return;
     }
-  };
-  setTimeout(tryNavigate, 300);
+    
+    // Wait for session to be established
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const tryNavigate = async () => {
+      attempts++;
+      console.log(`[Login] Fetching user role... (attempt ${attempts}/${maxAttempts})`);
+      
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error("[Login] Error getting user:", userError);
+          if (attempts < maxAttempts) {
+            setTimeout(tryNavigate, 300);
+          } else {
+            toast.error("Session error. Please try again.");
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        if (!user) {
+          console.error("[Login] No user found after login");
+          if (attempts < maxAttempts) {
+            setTimeout(tryNavigate, 300);
+          } else {
+            toast.error("User session not found. Please try again.");
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        console.log("[Login] User found:", user.email);
+        
+        const { data: roleData, error: roleError } = await supabase.rpc("get_user_role", { _user_id: user.id });
+        
+        if (roleError) {
+          console.error("[Login] Error fetching role:", roleError);
+          if (attempts < maxAttempts) {
+            setTimeout(tryNavigate, 300);
+          } else {
+            toast.error("Could not fetch user role. Contact support.");
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        console.log("[Login] Role fetched:", roleData);
+        
+        if (roleData === "admin") { 
+          console.log("[Login] Navigating to admin");
+          navigate("/admin"); 
+          return; 
+        }
+        else if (roleData === "vendor") { 
+          console.log("[Login] Navigating to vendor");
+          navigate("/vendor"); 
+          return; 
+        }
+        else if (roleData === "cashier") { 
+          console.log("[Login] Navigating to cashier");
+          navigate("/cashier"); 
+          return; 
+        }
+        
+        // If we get here, role was not found
+        console.warn("[Login] Unknown role:", roleData);
+        if (attempts < maxAttempts) {
+          setTimeout(tryNavigate, 300);
+        } else {
+          toast.error("Your account does not have a valid role assigned. Contact support.");
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error("[Login] Unexpected error:", err);
+        if (attempts < maxAttempts) {
+          setTimeout(tryNavigate, 300);
+        } else {
+          toast.error("Unexpected error during login. Please try again.");
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    tryNavigate();
+  } catch (err) {
+    console.error("[Login] Failed to sign in:", err);
+    toast.error("Login failed. Please try again.");
+    setIsLoading(false);
+  }
 };
 
   return (

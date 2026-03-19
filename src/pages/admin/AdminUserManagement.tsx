@@ -46,40 +46,70 @@ const AdminUserManagement = () => {
   });
 
   const createUser = useMutation({
-    mutationFn: async () => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(form.email.trim())) throw new Error("Please enter a valid email address");
-      if (form.password.length < 6) throw new Error("Password must be at least 6 characters");
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("create-user", {
-        body: {
-          email: form.email.trim(),
-          password: form.password,
-          first_name: form.first_name,
-          middle_name: form.middle_name,
-          last_name: form.last_name,
-          contact_number: form.contact_number,
-          address: form.address,
-          role: form.role,
-          stall_number: form.stall_number,
-          section: form.section,
-        },
-      });
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.error) throw new Error(res.data.error);
-      return res.data;
-    },
-    onSuccess: async () => {
-      toast.success("Account created successfully!");
-      // Small delay to let the DB trigger complete profile/role creation
-      await new Promise(r => setTimeout(r, 500));
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      setShowCreate(false);
-      setForm({ first_name: "", middle_name: "", last_name: "", address: "", contact_number: "", stall_number: "", section: "General", role: "vendor", email: "", password: "" });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  mutationFn: async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) throw new Error("Please enter a valid email address");
+    if (form.password.length < 6) throw new Error("Password must be at least 6 characters");
 
+    // ✅ GET SESSION (FIX)
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("You must be logged in as admin");
+    }
+
+    // ✅ CALL EDGE FUNCTION WITH AUTH HEADER (MAIN FIX)
+    const res = await supabase.functions.invoke("create-user", {
+      body: {
+        email: form.email.trim(),
+        password: form.password,
+        first_name: form.first_name,
+        middle_name: form.middle_name,
+        last_name: form.last_name,
+        contact_number: form.contact_number,
+        address: form.address,
+        role: form.role,
+        stall_number: form.stall_number,
+        section: form.section,
+      },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`, // ✅ VERY IMPORTANT FIX
+      },
+    });
+
+    if (res.error) throw new Error(res.error.message);
+    if (res.data?.error) throw new Error(res.data.error);
+
+    return res.data;
+  },
+
+  onSuccess: async () => {
+    toast.success("Account created successfully!");
+
+    await new Promise(r => setTimeout(r, 500));
+
+    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    setShowCreate(false);
+
+    setForm({
+      first_name: "",
+      middle_name: "",
+      last_name: "",
+      address: "",
+      contact_number: "",
+      stall_number: "",
+      section: "General",
+      role: "vendor",
+      email: "",
+      password: "",
+    });
+  },
+
+  onError: (e: Error) => {
+    console.error("Create User Error:", e);
+    toast.error(e.message);
+  },
+});
   const filtered = users.filter((u: any) =>
     u.name.toLowerCase().includes(search.toLowerCase()) || u.stall.includes(search)
   );

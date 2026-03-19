@@ -22,13 +22,35 @@ Deno.serve(async (req) => {
       email: 'admin@palengclick.com',
       password: 'admin123456',
       email_confirm: true,
-      user_metadata: { first_name: 'Municipal', last_name: 'Treasurer', role: 'admin' }
+      user_metadata: { first_name: 'Municipal', middle_name: 'Treasury', last_name: 'Treasurer', role: 'admin' }
     })
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
+    }
+
+    // Wait for trigger to complete, then verify role was created
+    await new Promise(r => setTimeout(r, 100))
+    
+    const { data: roleData, error: roleCheckError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', newUser.user.id)
+      .single()
+    
+    if (!roleData || roleCheckError) {
+      console.warn('Trigger did not create admin role, creating manually...')
+      const { error: roleInsertError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: newUser.user.id, role: 'admin' })
+      
+      if (roleInsertError) {
+        return new Response(JSON.stringify({ error: `Failed to assign admin role: ${roleInsertError.message}` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
     return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {

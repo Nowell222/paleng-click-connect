@@ -1,4 +1,3 @@
-
 import { CreditCard, QrCode, Clock, CheckCircle2, AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";

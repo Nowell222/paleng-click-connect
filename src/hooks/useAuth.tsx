@@ -1,14 +1,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-type AppRole = "admin" | "cashier" | "vendor";
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+// Derive types directly from the generated DB schema — always in sync
+type UserRoleRow = Database["public"]["Tables"]["user_roles"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface Profile {
   first_name: string;
   last_name: string;
-  middle_name?: string;
-  contact_number?: string;
+  middle_name?: string | null;
+  contact_number?: string | null;
 }
 
 interface AuthContextType {
@@ -30,29 +35,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch role and profile safely
   const fetchRoleAndProfile = async (userId: string) => {
     try {
-      // Get role from user_roles table
+      console.log("[useAuth] 🔵 fetchRoleAndProfile called for userId:", userId);
+
+      // Select * so Supabase can infer the full Row type — avoids SelectQueryError
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("*")
         .eq("user_id", userId)
-        .single();
-      if (roleError) throw roleError;
-      setRole((roleData?.role as AppRole) || null);
+        .maybeSingle<UserRoleRow>();
 
-      // Get profile
+      if (roleError) {
+        console.warn("[useAuth] ⚠️ user_roles query error:", roleError.message, "| code:", roleError.code);
+        setRole(null);
+      } else {
+        console.log("[useAuth] ✅ Role fetched:", roleData?.role ?? "none");
+        setRole(roleData?.role ?? null);
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, last_name, middle_name, contact_number")
+        .select("*")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle<ProfileRow>();
+
       if (profileError) {
         console.warn("[useAuth] Profile fetch warning:", profileError.message);
-        return; // Profile might not exist yet
+      } else if (profileData) {
+        setProfile({
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          middle_name: profileData.middle_name,
+          contact_number: profileData.contact_number,
+        });
       }
-      if (profileData) setProfile(profileData);
     } catch (error) {
       console.error("[useAuth] Error fetching role/profile:", error);
       setRole(null);
@@ -61,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let mounted = true; // Fixes race conditions in Strict Mode
+    let mounted = true;
 
     const initAuth = async () => {
       try {
@@ -81,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
         setProfile(null);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -109,25 +126,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("[useAuth] 🔐 signIn called with email:", email);
       console.log("[useAuth] ⏳ About to call supabase.auth.signInWithPassword...");
-      
+
       const startTime = performance.now();
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       const endTime = performance.now();
-      
+
       console.log(`[useAuth] ✅ signInWithPassword returned after ${(endTime - startTime).toFixed(2)}ms`);
-      console.log("[useAuth] Response error:", error);
-      console.log("[useAuth] Response data.user:", data.user);
-      
+
       if (error) {
         console.error("[useAuth] ❌ Auth error:", error.message);
         return { error: error.message };
       }
-      
+
       if (data.user) {
         console.log("[useAuth] 📝 Fetching role and profile for user:", data.user.id);
         await fetchRoleAndProfile(data.user.id);
       }
-      
+
       console.log("[useAuth] ✅ signIn completed successfully");
       return { error: null };
     } catch (err) {

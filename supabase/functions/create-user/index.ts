@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { first_name, last_name, role }
+      user_metadata: { first_name, middle_name, last_name, role }
     })
 
     if (createError) {
@@ -63,11 +63,41 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Update profile with extra fields
-    await supabaseAdmin
+    // Wait a moment for trigger to complete, then update profile with extra fields
+    await new Promise(r => setTimeout(r, 100))
+    
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ middle_name, contact_number, address })
       .eq('user_id', newUser.user.id)
+    
+    if (updateError) {
+      console.error('Profile update error:', updateError)
+      return new Response(JSON.stringify({ error: `Profile creation failed: ${updateError.message}` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    // Verify user_roles was created by trigger
+    const { data: roleData, error: roleCheckError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', newUser.user.id)
+      .single()
+    
+    if (!roleData || roleCheckError) {
+      // If trigger didn't create role, create it manually
+      console.warn('Trigger did not create user_role, creating manually...')
+      const { error: roleInsertError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: newUser.user.id, role: role as any })
+      
+      if (roleInsertError) {
+        return new Response(JSON.stringify({ error: `Failed to assign role: ${roleInsertError.message}` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    }
 
     // If vendor, create stall and vendor record
     if (role === 'vendor' && stall_number) {

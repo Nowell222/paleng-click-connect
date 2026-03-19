@@ -9,75 +9,37 @@ import { toast } from "sonner";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { signIn, user, role, loading } = useAuth();
+  const { signIn, role, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Watch for role change after successful login.
-  // Do NOT include isLoading here — after a successful signIn, isLoading stays
-  // true intentionally (to keep the spinner), so checking !isLoading blocks
-  // navigation forever. The loading guard from useAuth covers the initial
-  // session-restore case instead.
+  // When role is set in context after login, navigate automatically
   useEffect(() => {
-    if (loading) return; // still restoring session on page load, wait
-
-    if (user && role) {
-      console.log("[Login] ✅ Auth context updated with role:", role);
-
-      if (role === "admin") {
-        console.log("[Login] ✅ Navigating to /admin");
-        navigate("/admin");
-      } else if (role === "vendor") {
-        console.log("[Login] ✅ Navigating to /vendor");
-        navigate("/vendor");
-      } else if (role === "cashier") {
-        console.log("[Login] ✅ Navigating to /cashier");
-        navigate("/cashier");
-      }
+    if (isLoading && user && role) {
+      if (role === "admin") navigate("/admin");
+      else if (role === "vendor") navigate("/vendor");
+      else if (role === "cashier") navigate("/cashier");
     }
-  }, [user, role, loading, navigate]); // ← removed isLoading, added loading
+  }, [role, user, isLoading]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      toast.error("Please enter your email and password");
-      return;
-    }
-
+    if (!email || !password) { toast.error("Please enter your email and password"); return; }
     setIsLoading(true);
-    console.log("[Login] Starting login process for:", email);
-
-    try {
-      console.log("[Login] Calling signIn...");
-      const { error } = await signIn(email, password);
-
-      if (error) {
-        console.error("[Login] Sign in error:", error);
-        toast.error(error || "Login failed");
-        setIsLoading(false);
-        return;
-      }
-
-      console.log("[Login] Sign in successful, waiting for auth context to update...");
-      // isLoading stays true — the useEffect above will fire once role is set
-      // and handle navigation.
-    } catch (err) {
-      console.error("[Login] Unexpected error during login:", err);
-      toast.error("Login failed. Please try again.");
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error(error);
       setIsLoading(false);
     }
+    // Navigation is handled by the useEffect above when role loads
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        <Link
-          to="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to home
         </Link>
         <div className="rounded-2xl border bg-card p-8 shadow-civic">
@@ -93,31 +55,13 @@ const LoginPage = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl"
-              />
+              <Input id="email" type="email" autoComplete="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 rounded-xl pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl pr-12" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -126,9 +70,7 @@ const LoginPage = () => {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Having trouble logging in? Contact the Municipal Treasurer's Office.
-          </p>
+          <p className="mt-4 text-center text-sm text-muted-foreground">Having trouble logging in? Contact the Municipal Treasurer's Office.</p>
         </div>
       </div>
     </div>

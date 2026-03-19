@@ -22,27 +22,21 @@ const AdminUserManagement = () => {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("*, user_roles(role)")
-        .order("created_at", { ascending: false });
+      const [{ data: profiles }, { data: roles }, { data: vendors }] = await Promise.all([
+        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("user_id, role"),
+        supabase.from("vendors").select("user_id, stalls(stall_number)"),
+      ]);
 
       if (!profiles) return [];
 
-      // Get vendor stall info
-      const userIds = profiles.map(p => p.user_id);
-      const { data: vendors } = await supabase
-        .from("vendors")
-        .select("user_id, stalls(stall_number)")
-        .in("user_id", userIds);
-
       return profiles.map(p => {
+        const userRole = roles?.find(r => r.user_id === p.user_id);
         const vendorInfo = vendors?.find(v => v.user_id === p.user_id);
-        const role = (p as any).user_roles?.[0]?.role || "vendor";
         return {
           id: p.user_id,
           name: `${p.first_name} ${p.last_name}`,
-          role,
+          role: userRole?.role || "vendor",
           stall: (vendorInfo?.stalls as any)?.stall_number || "—",
           contact: p.contact_number || "—",
           status: p.status,
@@ -53,10 +47,13 @@ const AdminUserManagement = () => {
 
   const createUser = useMutation({
     mutationFn: async () => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) throw new Error("Please enter a valid email address");
+      if (form.password.length < 6) throw new Error("Password must be at least 6 characters");
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-user", {
         body: {
-          email: form.email,
+          email: form.email.trim(),
           password: form.password,
           first_name: form.first_name,
           middle_name: form.middle_name,
